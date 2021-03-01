@@ -5,9 +5,11 @@ Werkzeug Documentation:  http://werkzeug.pocoo.org/documentation/
 This file creates your application.
 """
 import os
+from .forms import UploadForm
 from app import app
-from flask import render_template, request, redirect, url_for, flash, session, abort
+from flask import render_template, request, redirect, url_for, flash, session, abort, send_from_directory
 from werkzeug.utils import secure_filename
+
 
 
 ###
@@ -32,15 +34,23 @@ def upload():
         abort(401)
 
     # Instantiate your form class
+    imageForm = UploadForm()
 
     # Validate file upload on submit
-    if request.method == 'POST':
+    if request.method == 'POST' and imageForm.validate_on_submit():
         # Get file data and save to your uploads folder
+        image = imageForm.image.data
+        description = imageForm.description.data
+        filename = secure_filename(image.filename)
+        image.save(os.path.join(app.config['UPLOAD_FOLDER'],filename))
 
         flash('File Saved', 'success')
+        render_template('files.html', filename = filename, description = description)
         return redirect(url_for('home'))
+    else:
+        flash(flash_errors(imageForm))
 
-    return render_template('upload.html')
+    return render_template('upload.html', form = imageForm)
 
 
 @app.route('/login', methods=['POST', 'GET'])
@@ -63,6 +73,31 @@ def logout():
     flash('You were logged out', 'success')
     return redirect(url_for('home'))
 
+def get_uploaded_images():
+    filenames = []
+    rootdir = os.getcwd()
+    print(rootdir)
+    path = '/uploads/'
+    for subdir,dirs,files in os.walk(rootdir + path):
+        for file in files:
+            if file == '.gitkeep':
+                continue
+            else:
+                print(os.path.join(subdir,file))
+                filenames.append(file)
+    return filenames
+
+@app.route('/files')
+def files():
+    if not session.get('logged_in'):
+        abort(401)
+    else:
+        return render_template('files.html', filenames = get_uploaded_images())
+
+@app.route('/uploads/<filename>')
+def get_images(filename):
+    root_dir = os.getcwd()
+    return send_from_directory(os.path.join(root_dir, app.config['UPLOAD_FOLDER']), filename)
 
 ###
 # The functions below should be applicable to all Flask apps.

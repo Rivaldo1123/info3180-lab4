@@ -1,0 +1,13 @@
+{% extends "base.html" %} {% block main %}
+<div class="box">
+    <h2>{{ description }}</h2>
+
+    <div>
+        <ol> <img src="{{ url_for('get_images', filename = filename) }}" /> </ol>
+    </div>
+
+</div>
+
+
+
+{%endblock%}
